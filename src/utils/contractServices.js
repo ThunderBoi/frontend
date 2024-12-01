@@ -47,6 +47,8 @@ export const getAllUsers = async () => {
       console.error("Contract is not initialized");
       await initialize();
     }
+    console.log("Getting all users...");
+    console.log(await contract.test());
     const users = await contract.getAllUsers();
     return users;
   } catch (error) {
