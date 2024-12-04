@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAllOffers, deleteOffer, initiateTransaction, acceptOffer, getUserProfile } from "../utils/contractServices";
+import { getFilteredOffers, deleteOffer, initiateTransaction, acceptOffer, getUserProfile, getOfferCount } from "../utils/contractServices";
 import { toast } from "react-toastify";
 
 function OffersList({ account }) {
@@ -16,10 +16,11 @@ function OffersList({ account }) {
           setUserProfile(profile);
         }
 
-        // Fetch offers
-        const offersList = await getAllOffers();
+        // Fetch offers & offer Count
+        const offersList = await getFilteredOffers();
         console.log("Offers fetched from contract:", offersList); // Debug log
         setOffers(offersList);
+
       } catch (error) {
         console.error("Failed to fetch data:", error);
         toast.error("Failed to fetch data. Please try again.");
@@ -32,15 +33,24 @@ function OffersList({ account }) {
   // Handle deleting an offer without full page reload
   const handleDeleteOffer = async (offerID) => {
     try {
-      await deleteOffer(offerID);
-      setOffers((prevOffers) => prevOffers.filter((offer) => offer.offerID !== offerID));
+      const offer = offers.find((o) => o.offerID === offerID);
+      if (!offer) {
+        toast.error("Invalid offer ID.");
+        return;
+      }
+  
+      const receipt = await deleteOffer(offerID);
+      console.log("Offer deleted successfully:", receipt);
+  
+      setOffers((prevOffers) => prevOffers.filter((o) => o.offerID !== offerID));
       toast.success("Offer deleted successfully!");
     } catch (error) {
       console.error("Failed to delete offer:", error);
       toast.error("Failed to delete offer. Please try again.");
     }
   };
-
+  
+  
   // Handle initiating a transaction without full page reload
   const handleInitiateTransaction = async (offerID, buyer, seller) => {
     try {
@@ -81,8 +91,9 @@ function OffersList({ account }) {
       ) : (
         <ul>
           {offers.map((offer) => (
-            <li key={offer.offerID}>
-              <p>Item: {offer.item}</p>
+              <li key={offer.offerID || offer.index}>
+              <p>[{`OfferID #${offer.offerID}`}]</p>
+              <p>Item {offer.item}  </p>
               <p>Price: {offer.price} EUR</p>
               <p>Description: {offer.description}</p>
               <p>Seller: {offer.seller}</p>

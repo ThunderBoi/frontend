@@ -48,8 +48,8 @@ export const getAllUsers = async () => {
       await initialize();
     }
     console.log("Getting all users...");
-    console.log(await contract.test());
     const users = await contract.getAllUsers();
+    console.log("All Users:", users);
     return users;
   } catch (error) {
     console.error("Error fetching all users:", error);
@@ -80,25 +80,66 @@ export const getUserProfile = async (address) => {
 // Function to register a user, passing whether the user is a marketplace or not
 export const registerUser = async (isMarketplace) => {
   try {
-    if (!provider || !contract) {
-      console.error("Provider or contract is not initialized");
-      await initialize();
+    // Check if the provider and contract are initialized
+    try {
+      if (!provider || !contract) {
+        console.error("Provider or contract is not initialized");
+        await initialize(); // Assuming this initializes provider and contract
+        console.log("Provider and contract initialized successfully.");
+      }
+    } catch (initializeError) {
+      console.error("Error during initialization:", initializeError);
+      throw new Error("Initialization failed.");
     }
-    const signer = await provider.getSigner();
-    const contractWithSigner = contract.connect(signer);
 
-    // Explicitly adding gas limit to ensure enough gas for execution
-    await contractWithSigner.registerUser(isMarketplace);
+    // Get signer from provider
+    let signer;
+    try {
+      signer = await provider.getSigner();
+      console.log("Signer retrieved successfully:", await signer.getAddress());
+    } catch (signerError) {
+      console.error("Error retrieving signer:", signerError);
+      throw new Error("Failed to retrieve signer.");
+    }
+
+    // Connect contract with signer
+    let contractWithSigner;
+    try {
+      contractWithSigner = contract.connect(signer);
+      console.log("Contract connected with signer successfully.");
+    } catch (contractConnectionError) {
+      console.error("Error connecting contract with signer:", contractConnectionError);
+      throw new Error("Failed to connect contract with signer.");
+    }
+
+    // Call the registerUser function on the smart contract
+    try {
+      // Explicitly adding gas limit to ensure enough gas for execution
+      const tx = await contractWithSigner.registerUser(isMarketplace, { gasLimit: 300000 });
+      console.log("Transaction sent successfully. Hash:", tx.hash);
+      await tx.wait(); // Wait for transaction confirmation
+      console.log("Transaction confirmed successfully.");
+    } catch (transactionError) {
+      if (transactionError.code === "CALL_EXCEPTION") {
+        console.error(
+          "Call exception occurred. Likely a require condition failed in the smart contract."
+        );
+      } else if (transactionError.data?.message) {
+        console.error("Revert Reason:", transactionError.data.message);
+      } else {
+        console.error("Error during transaction execution:", transactionError);
+      }
+      throw new Error("Transaction failed.");
+    }
+
     console.log("User successfully registered!");
   } catch (error) {
-    if (error.code === "CALL_EXCEPTION") {
-      console.error("Call exception occurred. Likely a require condition failed in the smart contract.");
-    } else {
-      console.error("Error registering user:", error);
-    }
+    // Top-level catch for any other uncaught errors
+    console.error("Failed to register user:", error);
     throw error;
   }
 };
+
 
 // Function to create an offer
 export const createOffer = async (item, price, description) => {
@@ -118,16 +159,17 @@ export const createOffer = async (item, price, description) => {
 };
 
 // Function to get all offers
-export const getAllOffers = async () => {
+export const getFilteredOffers = async () => {
   try {
     if (!contract) {
       console.error("Contract is not initialized");
       await initialize();
     }
-    const offers = await contract.getAllOffers();
+    const offers = await contract.getFilteredOffers();
     return offers.map((offer) => ({
+      offerID: offer.offerID,
       item: offer.item,
-      price: offer.price,
+      price: offer.price.toString(),
       description: offer.description,
       seller: offer.seller,
     }));
@@ -136,6 +178,7 @@ export const getAllOffers = async () => {
     throw error;
   }
 };
+
 
 // Function to delete an offer
 export const deleteOffer = async (offerID) => {
@@ -146,13 +189,28 @@ export const deleteOffer = async (offerID) => {
     }
     const signer = await provider.getSigner();
     const contractWithSigner = contract.connect(signer);
-    await contractWithSigner.deleteOffer(offerID);
-    console.log("Offer deleted successfully");
+
+    console.log(`Attempting to delete offer with ID: ${offerID}`);
+    const tx = await contractWithSigner.deleteOffer(offerID);
+    console.log("Transaction sent. Hash:", tx.hash);
+
+    // Wait for the transaction to be confirmed
+    const receipt = await tx.wait();
+    console.log("Transaction confirmed. Receipt:", receipt);
+
+    return receipt;
   } catch (error) {
     console.error("Error deleting offer:", error);
-    throw error;
+
+    // Capture specific revert reasons if available
+    if (error.data?.message) {
+      console.error("Revert reason:", error.data.message);
+    }
+
+    throw error; // Re-throw the error for frontend handling
   }
 };
+
 
 // Function to initiate a transaction
 export const initiateTransaction = async (buyer, seller, offerID) => {

@@ -10,7 +10,7 @@ function CreateOffer({ onOfferCreated }) {
   const handleCreateOffer = async () => {
     try {
       if (!item || !price || !description) {
-        toast.error("All fields are required!");
+        toast.error("Enter correct values!");
         return;
       }
       await createOffer(item, price, description);
