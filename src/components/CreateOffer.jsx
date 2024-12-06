@@ -6,24 +6,52 @@ function CreateOffer({ onOfferCreated }) {
   const [item, setItem] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Tracks submission state
+
+  const validateInputs = () => {
+    if (!item.trim() || !description.trim()) {
+      toast.error("Item name and description cannot be empty!");
+      return false;
+    }
+    if (isNaN(price) || price <= 0) {
+      toast.error("Price must be a positive number!");
+      return false;
+    }
+    return true;
+  };
 
   const handleCreateOffer = async () => {
+    if (!validateInputs()) return;
+
+    setIsSubmitting(true); // Disable the button while processing
+
     try {
-      if (!item || !price || !description) {
-        toast.error("Enter correct values!");
-        return;
-      }
       await createOffer(item, price, description);
+
       toast.success("Offer created successfully!");
+      
+      // Reset input fields
       setItem("");
       setPrice("");
       setDescription("");
+
+      // Notify parent component of the new offer
       if (onOfferCreated) {
         onOfferCreated();
       }
     } catch (error) {
       console.error("Failed to create offer:", error);
-      toast.error("Failed to create offer. Please try again.");
+
+      // Display specific error messages if available
+      if (error.data?.message) {
+        toast.error(`Failed to create offer: ${error.data.message}`);
+      } else if (error.message) {
+        toast.error(`Failed to create offer: ${error.message}`);
+      } else {
+        toast.error("Failed to create offer. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false); // Re-enable the button
     }
   };
 
@@ -48,7 +76,9 @@ function CreateOffer({ onOfferCreated }) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <button onClick={handleCreateOffer}>Create Offer</button>
+      <button onClick={handleCreateOffer} disabled={isSubmitting}>
+        {isSubmitting ? "Creating..." : "Create Offer"}
+      </button>
     </div>
   );
 }

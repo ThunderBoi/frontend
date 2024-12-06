@@ -15,7 +15,8 @@ function OffersList({ account }) {
           const profile = await getUserProfile(account);
           setUserProfile(profile);
         }
-
+        const count = await getOfferCount();
+        console.log("Offer count fetched from contract:", count); // Debug log
         // Fetch offers & offer Count
         const offersList = await getFilteredOffers();
         console.log("Offers fetched from contract:", offersList); // Debug log
@@ -42,7 +43,7 @@ function OffersList({ account }) {
       const receipt = await deleteOffer(offerID);
       console.log("Offer deleted successfully:", receipt);
   
-      setOffers((prevOffers) => prevOffers.filter((o) => o.offerID !== offerID));
+      setOffers((prevOffers) => prevOffers.filter((offer) => offer.offerID !== offerID));
       toast.success("Offer deleted successfully!");
     } catch (error) {
       console.error("Failed to delete offer:", error);
@@ -52,12 +53,9 @@ function OffersList({ account }) {
   
   
   // Handle initiating a transaction without full page reload
-  const handleInitiateTransaction = async (offerID, buyer, seller) => {
+  const handleInitiateTransaction = async (buyer, seller, offerID) => {
     try {
-      const transaction = await initiateTransaction(buyer, seller, offerID);
-      if (transaction && transaction.wait) {
-        await transaction.wait();
-      }
+      await initiateTransaction(buyer, seller, offerID);
       toast.success("Transaction initiated successfully!");
       // Update offers after transaction initiation (instead of full reload)
       setOffers((prevOffers) => prevOffers.filter((offer) => offer.offerID !== offerID));
@@ -84,38 +82,34 @@ function OffersList({ account }) {
   };
 
   return (
-    <div className="offers-list">
-      <h3>Available Offers</h3>
-      {offers.length === 0 ? (
-        <p>No offers available</p>
+<ul>
+  {offers.map((offer, index) => (
+    <li key={offer.offerID || index}> {/* Use index as a fallback */}
+      <p>[{`OfferID #${offer.offerID}`}]</p>
+      <p>Item {offer.item}</p>
+      <p>Price: {offer.price} EUR</p>
+      <p>Description: {offer.description}</p>
+      <p>Seller: {offer.seller}</p>
+      {offer.buyer !== "0x0000000000000000000000000000000000000000" ? (
+        <p>Buyer: {offer.buyer}</p>
       ) : (
-        <ul>
-          {offers.map((offer) => (
-              <li key={offer.offerID || offer.index}>
-              <p>[{`OfferID #${offer.offerID}`}]</p>
-              <p>Item {offer.item}  </p>
-              <p>Price: {offer.price} EUR</p>
-              <p>Description: {offer.description}</p>
-              <p>Seller: {offer.seller}</p>
-              {offer.buyer !== "0x0000000000000000000000000000000000000000" && (
-                <p>Buyer: {offer.buyer}</p>
-              )}
-              {account === offer.seller && (
-                <button onClick={() => handleDeleteOffer(offer.offerID)}>Delete Offer</button>
-              )}
-              {userProfile && userProfile.isMarketplace && account !== offer.seller && (
-                <button onClick={() => handleInitiateTransaction(offer.offerID, account, offer.seller)}>
-                  Initiate Transaction
-                </button>
-              )}
-              {userProfile && !userProfile.isMarketplace && account !== offer.seller && (
-                <button onClick={() => handleAcceptOffer(offer.offerID)}>Buy Offer</button>
-              )}
-            </li>
-          ))}
-        </ul>
+        <p>Buyer: No buyer yet</p>
       )}
-    </div>
+      {account === offer.seller && (
+        <button onClick={() => handleDeleteOffer(offer.offerID)}>Delete Offer</button>
+      )}
+      {userProfile.isMarketplace && offer.buyerAccept && (
+        <button onClick={() => handleInitiateTransaction(offer.buyer, offer.seller, offer.offerID)}>
+          Initiate Transaction
+        </button>
+      )}
+      {!userProfile.isMarketplace && account !== offer.seller && !offer.buyerAccept &&(
+        <button onClick={() => handleAcceptOffer(offer.offerID)}>Accept Offer</button>
+      )}
+    </li>
+  ))}
+</ul>
+
   );
 }
 

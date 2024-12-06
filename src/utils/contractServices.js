@@ -140,6 +140,16 @@ export const registerUser = async (isMarketplace) => {
   }
 };
 
+export const getOfferCount = async () => {
+  try {
+    if (!contract) await initialize();
+    const offerCount = await contract.getOfferCount();
+    return offerCount; // Convert BigInt to number
+  } catch (error) {
+    console.error("Failed to fetch offer count:", error);
+    throw error;
+  }
+};
 
 // Function to create an offer
 export const createOffer = async (item, price, description) => {
@@ -172,6 +182,8 @@ export const getFilteredOffers = async () => {
       price: offer.price.toString(),
       description: offer.description,
       seller: offer.seller,
+      buyer: offer.buyer,
+      buyerAccept: offer.buyerAccept,
     }));
   } catch (error) {
     console.error("Error fetching offers:", error);
@@ -212,6 +224,58 @@ export const deleteOffer = async (offerID) => {
 };
 
 
+// Function to get all transactions
+// Function to get all transactions
+export const getAllTransactions = async () => {
+  try {
+    if (!contract) {
+      console.error("Contract is not initialized");
+      await initialize();
+    }
+
+    const transactions = await contract.getAllTransactions();
+
+    // Map the transactions from the contract to a JavaScript-friendly format
+    return transactions.map((transaction) => ({
+      transactionId: transaction.transactionID.toString(),
+      buyer: transaction.buyer,
+      seller: transaction.seller,
+      marketplace: transaction.marketplace,
+      startTime: transaction.startTime ? new Date(Number(transaction.startTime) * 1000) : null, // Handle possible null or missing
+      phase1EndTime: transaction.phase1EndTime
+        ? new Date(Number(transaction.phase1EndTime) * 1000)
+        : null,
+      phase2EndTime: transaction.phase2EndTime && Number(transaction.phase2EndTime) > 0
+        ? new Date(Number(transaction.phase2EndTime) * 1000)
+        : null,
+      phase3EndTime: transaction.phase3EndTime && Number(transaction.phase3EndTime) > 0
+        ? new Date(Number(transaction.phase3EndTime) * 1000)
+        : null,
+      phaseEndTime: transaction.phaseEndTime
+        ? new Date(Number(transaction.phaseEndTime) * 1000)
+        : null,
+      deliveryState: transaction.deliveryState,      
+      deliveryStateString:  transaction.deliveryState.toString() === "0" ? "Not Shipped" :
+                            transaction.deliveryState.toString() === "1" ? "Shipped" :
+                            transaction.deliveryState.toString() === "2" ? "NotShippedMissingData" :
+                            transaction.deliveryState.toString() === "3" ? "NotShippedDeliveryProblem" :
+                            "Unknown",
+      buyerRated: transaction.buyerRated,
+      sellerRated: transaction.sellerRated,
+      marketplaceRatedByBuyer: transaction.marketplaceRatedByBuyer,
+      marketplaceRatedBySeller: transaction.marketplaceRatedBySeller,
+      phase: Number(transaction.phase),
+      finalized: transaction.finalized,
+    }));
+    
+    
+  } catch (error) {
+    console.error("Error fetching all transactions:", error);
+    throw error;
+  }
+};
+
+
 // Function to initiate a transaction
 export const initiateTransaction = async (buyer, seller, offerID) => {
   try {
@@ -246,68 +310,88 @@ export const acceptOffer = async (offerID) => {
   }
 };
 
-// Function to rate a transaction
-export const rateTransaction = async (transactionId, rating, review) => {
+// Function to confirm shipping
+export const confirmShipping = async (transactionId, phase2Duration) => {
   try {
-    if (!provider || !contract) {
-      console.error("Provider or contract is not initialized");
-      await initialize();
-    }
     const signer = await provider.getSigner();
-    const contractWithSigner = contract.connect(signer);
-    await contractWithSigner.submitRating(transactionId, rating, review);
-    console.log("Rating submitted successfully");
+    console.log("transactionId", transactionId);
+    console.log("phase2Duration", phase2Duration);
+    const contractWithSigner = contract.connect(signer);    
+    await contractWithSigner.confirmShipping(transactionId, phase2Duration);
   } catch (error) {
-    console.error("Error submitting rating:", error);
+    console.error("Error confirming shipping:", error);
     throw error;
   }
 };
 
-// Function to update the transaction status
-export const updateTransactionStatus = async (transactionId, newPhase) => {
+// Function to update delivery state
+export const updateDeliveryState = async (transactionId, deliveryState) => {
   try {
-    if (!provider || !contract) {
-      console.error("Provider or contract is not initialized");
-      await initialize();
-    }
     const signer = await provider.getSigner();
-    const contractWithSigner = contract.connect(signer);
-    await contractWithSigner.updateTransactionStatus(transactionId, newPhase);
-    console.log("Transaction status updated successfully");
+    const contractWithSigner = contract.connect(signer);   
+
+    // Define the mapping from string to number
+    const deliveryStateMapping = {
+      "NotShipped": 0,
+      "Shipped": 1,
+      "NotShippedMissingData": 2,
+      "NotShippedDeliveryProblem": 3
+    };
+
+    const deliveryStateNumber = deliveryStateMapping[deliveryState];
+
+
+    await contractWithSigner.updateDeliveryState(transactionId, deliveryStateNumber);
   } catch (error) {
-    console.error("Error updating transaction status:", error);
+    console.error("Error updating delivery state:", error);
     throw error;
   }
 };
 
-// Function to get the current transaction status
+
+// Function to rate the transaction
+export const rateTransaction = async (transactionId, ratingParticipant, ratingMarketplace) => {
+  try {
+    const signer = await provider.getSigner();
+    const contractWithSigner = contract.connect(signer);   
+    await contractWithSigner.rateParticipant(transactionId, ratingParticipant, ratingMarketplace);
+
+  } catch (error) {
+    console.error("Error rating transaction:", error);
+    throw error;
+  }
+};
+
+// Function to finalize transaction
+export const finalizeTransaction = async () => {
+  try {
+    const signer = await provider.getSigner();
+    const contractWithSigner = contract.connect(signer);   
+    await contractWithSigner.finalizeTransaction();
+  } catch (error) { 
+    console.error("Error finalizing transaction:", error);
+  }
+};
+
+// Function to get the current phase/state of a transaction
 export const getTransactionPhase = async (transactionId) => {
   try {
-    if (!contract) {
-      console.error("Contract is not initialized");
-      await initialize();
-    }
-    const status = await contract.getTransactionPhase(transactionId);
-    return status; // Assuming it returns a phase that can be understood by the frontend
+    const phase = await contract.getTransactionPhase(transactionId);
+    return phase;
   } catch (error) {
-    console.error("Error fetching transaction status:", error);
+    console.error("Error getting transaction phase:", error);
     throw error;
   }
 };
 
-// Function to confirm goods
-export const confirmGoods = async (transactionId) => {
+// Function to cancel a transaction
+export const cancelTransaction = async (transactionId) => {
   try {
-    if (!provider || !contract) {
-      console.error("Provider or contract is not initialized");
-      await initialize();
-    }
     const signer = await provider.getSigner();
     const contractWithSigner = contract.connect(signer);
-    await contractWithSigner.confirmGoods(transactionId);
-    console.log("Goods confirmed successfully");
+    await contractWithSigner.cancelTransaction(transactionId);
   } catch (error) {
-    console.error("Error confirming goods:", error);
+    console.error("Error cancelling transaction:", error);
     throw error;
   }
 };
