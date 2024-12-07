@@ -4,7 +4,7 @@ import ContractInfo from "./components/ContractInfo";
 import CreateOffer from "./components/CreateOffer";
 import OffersList from "./components/OffersList";
 import RegisterUserComponent from "./components/RegisterUser";
-import Transactions from "./components/Transactions"; // Ensure Transactions is imported
+import Transactions from "./components/Transactions";
 import { requestAccount, getUserProfile, getAllUsers } from "./utils/contractServices";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -61,26 +61,37 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <ToastContainer />
-      {!account ? (
-        <ConnectWalletButton setAccount={setAccount} />
-      ) : !isRegistered ? (
-        <RegisterUserComponent account={account} onUserRegistered={handleUserRegistered} />
-      ) : (
-        <div className="contract-interactions">
-          <ContractInfo account={account} />
-
-          {/* Display CreateOffer for users who are not marketplaces */}
-          {!isMarketplace && <CreateOffer />}
-
-          {/* Display OffersList for all users */}
-          <OffersList account={account} onSelectTransaction={handleSelectTransaction} />
-
-          {/* Transactions Component */}
-          <Transactions account={account} isMarketplace={isMarketplace} />
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      {/* Header */}
+      <header className="bg-blue-600 text-white py-4 shadow-md">
+        <div className="container mx-auto px-4">
+          <h1 className="text-2xl font-bold">Marketplace DApp</h1>
         </div>
-      )}
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-grow container mx-auto px-4 py-6 flex items-center justify-center">
+        <ToastContainer />
+        {!account ? (
+          <ConnectWalletButton setAccount={setAccount} />
+        ) : !isRegistered ? (
+          <RegisterUserComponent account={account} onUserRegistered={handleUserRegistered} />
+        ) : (
+          <div className="space-y-6">
+            <ContractInfo account={account} />
+            {!isMarketplace && <CreateOffer />}
+            <OffersList account={account} onSelectTransaction={handleSelectTransaction} />
+            <Transactions account={account} isMarketplace={isMarketplace} />
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-4">
+        <div className="container mx-auto px-4 text-center">
+          <p>&copy; {new Date().getFullYear()} Marketplace DApp. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }
