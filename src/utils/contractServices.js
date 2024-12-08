@@ -40,22 +40,32 @@ export const requestAccount = async () => {
   }
 };
 
-// Function to get all registered users
+// Function to get all registered users with their profiles
 export const getAllUsers = async () => {
   try {
     if (!contract) {
       console.error("Contract is not initialized");
       await initialize();
     }
-    console.log("Getting all users...");
-    const users = await contract.getAllUsers();
-    console.log("All Users:", users);
-    return users;
+
+    console.log("Fetching all users with profiles...");
+    const userProfiles = await contract.getAllUsers();
+
+    // Map the data into a more JS-friendly format
+    return userProfiles.map((profile) => ({
+      userAddress: profile.userAddress, // Address of the user
+      ratingSum: profile.ratingSum, // Sum of all ratings
+      ratingCount: profile.ratingCount, // Total number of ratings
+      exists: profile.exists, // Boolean: Whether the user exists
+      isMarketplace: profile.isMarketplace, // Boolean: Whether the user is a marketplace
+      authenticated: profile.authenticated, // Boolean: Whether the user is authenticated
+    }));
   } catch (error) {
     console.error("Error fetching all users:", error);
     throw error;
   }
 };
+
 
 // Function to get user profile by address
 export const getUserProfile = async (address) => {
@@ -64,18 +74,30 @@ export const getUserProfile = async (address) => {
       console.error("Contract is not initialized");
       await initialize();
     }
-    const userProfile = await contract.getUserProfile(address);
-    const [score, isMarketplace] = userProfile;
 
+    // Fetch the user profile struct from the contract
+    console.log("Fetching user profile for address:" + address);
+    const userProfile = await contract.getUserProfile(address);
+
+    // Map the struct values into a JavaScript-friendly object
     return {
-      score: parseInt(score, 10), // Ensure the returned score is a plain integer
-      isMarketplace: isMarketplace,
+      score:
+        Number(userProfile.ratingCount) > 0
+          ? Number(userProfile.ratingSum) / Number(userProfile.ratingCount) // Average score
+          : 0,
+      ratingSum: Number(userProfile.ratingSum), // Total sum of ratings
+      ratingCount: Number(userProfile.ratingCount), // Total count of ratings
+      exists: Boolean(userProfile.exists),
+      isMarketplace: Boolean(userProfile.isMarketplace),
+      authenticated: Boolean(userProfile.authenticated),
     };
   } catch (error) {
     console.error("Error fetching user profile:", error);
     throw error;
   }
 };
+
+
 
 // Function to register a user, passing whether the user is a marketplace or not
 export const registerUser = async (isMarketplace) => {
@@ -191,7 +213,6 @@ export const getFilteredOffers = async () => {
   }
 };
 
-
 // Function to delete an offer
 export const deleteOffer = async (offerID) => {
   try {
@@ -222,7 +243,6 @@ export const deleteOffer = async (offerID) => {
     throw error; // Re-throw the error for frontend handling
   }
 };
-
 
 // Function to get all transactions
 // Function to get all transactions
@@ -274,7 +294,6 @@ export const getAllTransactions = async () => {
     throw error;
   }
 };
-
 
 // Function to initiate a transaction
 export const initiateTransaction = async (buyer, seller, offerID) => {
