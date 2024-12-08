@@ -7,6 +7,7 @@ function CreateOffer({ onOfferCreated }) {
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // Control expanded state
 
   const validateInputs = () => {
     if (!item.trim() || !description.trim()) {
@@ -51,7 +52,13 @@ function CreateOffer({ onOfferCreated }) {
   };
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-lg mx-auto">
+    <div
+      className={`bg-white shadow-md rounded-lg p-6 w-full max-w-lg mx-auto transition-all duration-300 ease-in-out ${
+        isExpanded ? "h-auto" : "h-16 overflow-hidden"
+      }`}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+    >
       <h3 className="text-xl font-semibold text-gray-800 mb-4">Create a New Offer</h3>
       <form className="space-y-4">
         {/* Item Name Input */}

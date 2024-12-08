@@ -64,14 +64,12 @@ function App() {
     }
   };
   
-
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-blue-600 text-white py-4 shadow-md">
         <div className="container mx-auto px-4">
-          <h1 className="text-2xl font-bold">Marketplace DApp</h1>
+          <h1 className="text-2xl font-bold">Trust Score - Marketplace</h1>
         </div>
       </header>
 
@@ -86,18 +84,19 @@ function App() {
           <div className="space-y-6">
             <ContractInfo account={account} userProfile={userProfile} />
             <div className="flex flex-col lg:flex-row lg:space-x-6">
-            {/* Conditionally render Create Offer Section for non-marketplace users */}
-            {!isMarketplace && (
-              <div className="lg:w-1/3 w-full">
-                <CreateOffer />
-              </div>
-            )}
 
-            {/* Offers List Section is always visible */}
-            <div className={`w-full ${isMarketplace ? "" : "lg:w-2/3"}`}>
-              <OffersList account={account} />
+              {/* Conditionally render Create Offer Section for non-marketplace users */}
+              {!isMarketplace && (
+                <div className="lg:w-1/3 w-full">
+                  <CreateOffer />
+                </div>
+              )}
+
+              {/* Offers List Section is always visible */}
+              <div className={`w-full ${isMarketplace ? "" : "lg:w-2/3"}`}>
+                <OffersList account={account} />
+              </div>
             </div>
-</div>
 
             <Transactions account={account} isMarketplace={isMarketplace} />
           </div>
@@ -107,7 +106,7 @@ function App() {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-4">
         <div className="container mx-auto px-4 text-center">
-          <p>&copy; {new Date().getFullYear()} Marketplace DApp. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} TrustScore. All rights reserved.</p>
         </div>
       </footer>
     </div>
